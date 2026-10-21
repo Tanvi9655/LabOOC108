@@ -1,187 +1,202 @@
 #include <iostream>
-#include <fstream>   // For File Handling (ifstream, ofstream)
+#include <fstream>
 #include <string>
-#include <stdexcept> // For Try-Catch block exceptions
+#include <exception>
 
 using namespace std;
 
 // ==========================================
-// 1. BASE CLASS
+// 1. EXCEPTION HANDLING
 // ==========================================
-class Person {
+class InvalidSalaryException : public exception {
+public:
+    const char* what() const noexcept override {
+        return "Error: Salary amount cannot be negative!";
+    }
+};
+
+// ==========================================
+// 2. BASE CLASS (Abstraction & Virtual Functions)
+// ==========================================
+class Employee {
 protected:
+    // Data Members
+    int id;
     string name;
 
 public:
-    // Simple Constructor
-    Person(string n) {
-        name = n;
-        cout << "[Base Constructor] Person " << name << " created." << endl;
+    // Constructor
+    Employee(int empId = 0, string empName = "") : id(empId), name(empName) {}
+
+    // Virtual Destructor (Good practice for inheritance)
+    virtual ~Employee() {}
+
+    // Member Functions
+    virtual void display() const {
+        cout << "ID: " << id << " | Name: " << name;
     }
 
-    // Virtual Destructor
-    virtual ~Person() {
-        cout << "[Base Destructor] Person " << name << " destroyed." << endl;
+    // Pure virtual function if we wanted an abstract class, 
+    // but a regular virtual function allows flexible runtime overriding.
+    virtual double calculateTotalPay() const {
+        return 0.0;
     }
 
-    // 2. VIRTUAL FUNCTION
-    virtual void displayInfo() {
-        cout << "Name: " << name << " (General Person)" << endl;
-    }
+    // Helper functions for File handling
+    int getId() const { return id; }
+    string getName() const { return name; }
 };
 
 // ==========================================
-// 3. INHERITANCE (Employee inherits from Person)
+// 3. INHERITANCE (Derived Class)
 // ==========================================
-class Employee : public Person {
+class FullTimeEmployee : public Employee {
 private:
-    int id;
-    double salary;
+    // Derived class data member
+    double baseSalary;
 
 public:
-    // Simple Constructor (Calls the base constructor first)
-    Employee(string n, int i, double s) : Person(n) {
-        id = i;
-        salary = s;
-        cout << "[Derived Constructor] Employee data loaded." << endl;
-    }
-
-    // Destructor
-    ~Employee() {
-        cout << "[Derived Destructor] Employee data cleared." << endl;
-    }
-
-    // Overriding Virtual Function
-    void displayInfo() override {
-        cout << "ID: " << id << " | Name: " << name << " | Salary: $" << salary << endl;
-    }
-
-    // 4. FUNCTION OVERLOADING
-    // Version 1: Adds a flat bonus
-    void updateSalary(double bonus) {
-        salary = salary + bonus;
-    }
-
-    // Version 2: Adds a percentage hike
-    void updateSalary(int percentage) {
-        salary = salary + (salary * percentage / 100);
-    }
-
-    // 5. FILE HANDLING: WRITING INITIAL DATA
-    static void saveAllToFile(string filename, Employee* arr[], int count) {
-        ofstream outFile(filename);
-
-        // 6. TRY-CATCH BLOCK
-        try {
-            if (!outFile) {
-                throw runtime_error("Error: Could not open file for writing!");
-            }
-
-            for (int i = 0; i < count; i++) {
-                outFile << arr[i]->id << " " << arr[i]->name << " " << arr[i]->salary << endl;
-            }
-
-            outFile.close();
-            cout << "\nSuccessfully saved " << count << " employee(s) to '" << filename << "'." << endl;
+    // Constructor initializing both base and derived attributes
+    FullTimeEmployee(int empId = 0, string empName = "", double salary = 0.0) 
+        : Employee(empId, empName) {
+        
+        // 4. THROWING EXCEPTION FOR VALIDATION
+        if (salary < 0) {
+            throw InvalidSalaryException();
         }
-        catch (const runtime_error& e) {
-            cerr << e.what() << endl;
-        }
+        baseSalary = salary;
     }
 
-    // 5 (Cont.). FILE HANDLING: APPEND A SINGLE RECORD
-    static void appendToFile(string filename, int inputId, string inputName, double inputSalary) {
-        ofstream outFile(filename, ios::app); 
-
-        try {
-            if (!outFile) {
-                throw runtime_error("Error: Could not open file to add new record!");
-            }
-
-            outFile << inputId << " " << inputName << " " << inputSalary << endl;
-            outFile.close();
-            cout << "\nSuccessfully added your new record to the file!" << endl;
-        }
-        catch (const runtime_error& e) {
-            cerr << e.what() << endl;
-        }
+    // 5. VIRTUAL FUNCTION OVERRIDING (Polymorphism)
+    void display() const override {
+        Employee::display(); // Call base display
+        cout << " | Base Salary: ₹" << baseSalary 
+             << " | Total Pay: ₹" << calculateTotalPay() << endl;
     }
 
-    // 5 (Cont.). FILE HANDLING: READING COMBINED OUTPUTS
-    static void readAllFromFile(string filename) {
-        ifstream inFile(filename);
-
-        try {
-            if (!inFile) {
-                throw runtime_error("Error: Could not open file for reading!");
-            }
-
-            cout << "\n===============================" << endl;
-            cout << "     CURRENT COMPANY RECORDS   " << endl;
-            cout << "===============================" << endl;
-            
-            int fileId;
-            string fileName;
-            double fileSalary;
-
-            while (inFile >> fileId >> fileName >> fileSalary) {
-                cout << "ID: " << fileId << " | Name: " << fileName << " | Salary: $" << fileSalary << endl;
-            }
-            cout << "===============================" << endl;
-
-            inFile.close();
-        }
-        catch (const runtime_error& e) {
-            cerr << e.what() << endl;
-        }
+    double calculateTotalPay() const override {
+        return baseSalary;
     }
+
+    // 6. FUNCTION OVERLOADING (Compile-time Polymorphism)
+    // Overload 1: Calculate bonus by a flat amount
+    double calculateBonus(double flatAmount) {
+        return flatAmount;
+    }
+
+    // Overload 2: Calculate bonus by a percentage of base salary
+    double calculateBonus(int percentage) {
+        return baseSalary * (percentage / 100.0);
+    }
+    
+    double getSalary() const { return baseSalary; }
 };
 
 // ==========================================
-// MAIN FUNCTION
+// 7. FILE I/O OPERATIONS
 // ==========================================
-int main() {
-    cout << "--- Creating Multiple Employees ---" << endl;
-    int totalCount = 3;
-    Employee* empList[3];
+void saveEmployeeToFile(const FullTimeEmployee& emp, const string& filename) {
+    // Open file in Append mode
+    ofstream outFile(filename, ios::app);
+    if (!outFile) {
+        cerr << "Error opening file for writing!" << endl;
+        return;
+    }
+    // Write data separated by spaces or newlines
+    outFile << emp.getId() << "\n" << emp.getName() << "\n" << emp.getSalary() << "\n";
+    outFile.close();
+    cout << "Employee data saved to file successfully!\n";
+}
 
-    // Simple assignments matching your expected values
-    empList[0] = new Employee("Alice", 101, 55000);
-    empList[1] = new Employee("Bob", 102, 66000);
-    empList[2] = new Employee("Charlie", 103, 70000);
-
-    cout << "\n--- Updating Salaries ---" << endl;
-    // (Kept empty to replicate your console dump timeline precisely)
-
-    cout << "\n--- Displaying Employee Info via Polymorphism ---" << endl;
-    for (int i = 0; i < totalCount; i++) {
-        empList[i]->displayInfo();
+void readEmployeesFromFile(const string& filename) {
+    ifstream inFile(filename);
+    if (!inFile) {
+        cerr << "No existing data records found (or file missing)." << endl;
+        return;
     }
 
-    string dbFile = "company_records.txt";
-    Employee::saveAllToFile(dbFile, empList, totalCount);
+    cout << "\n--- Fetching Records From File ---" << endl;
+    int id;
+    string name;
+    double salary;
 
-    // Prompting for user's explicit record (e.g. Tanvi)
-    int newId;
-    string newName;
-    double newSalary;
+    // Read blocks of data sequentially until end-of-file
+    while (inFile >> id) {
+        inFile.ignore(); // Clean up newline before reading string
+        getline(inFile, name);
+        inFile >> salary;
 
-    cout << "\n--- Add Your Own New Employee Record ---" << endl;
-    cout << "Enter Employee ID (Number): ";
-    cin >> newId;
-    cout << "Enter Employee Name (Single Word): ";
-    cin >> newName;
-    cout << "Enter Employee Salary (Number): ";
-    cin >> newSalary;
+        // Reconstruct object from data stream
+        try {
+            FullTimeEmployee temp(id, name, salary);
+            temp.display();
+        } catch (const exception& e) {
+            cout << "Corrupted entry skipped. " << e.what() << endl;
+        }
+    }
+    inFile.close();
+}
 
-    // Append record and read everything back layout
-    Employee::appendToFile(dbFile, newId, newName, newSalary);
-    Employee::readAllFromFile(dbFile);
+// ==========================================
+// 8. MAIN EXECUTION ENGINE
+// ==========================================
+int main() {
+    string filename = "employees.txt";
+    int choice;
 
-    // Destructors running on cleanup 
-    cout << "\n--- Cleaning up Memory ---" << endl;
-    for (int i = 0; i < totalCount; i++) {
-        delete empList[i];
+    while (true) {
+        cout << "\n===== EMPLOYEE MINI-PROJECT SYSTEM =====" << endl;
+        cout << "1. Add New Employee Record\n";
+        cout << "2. View All Employee Records\n";
+        cout << "3. Exit\n";
+        cout << "Enter selection: ";
+        cin >> choice;
+
+        if (choice == 3) {
+            cout << "Terminating application. Goodbye!" << endl;
+            break;
+        }
+
+        if (choice == 1) {
+            int id;
+            string name;
+            double salary;
+
+            cout << "Enter Employee ID: ";
+            cin >> id;
+            cin.ignore(); // Clear buffer newline
+            cout << "Enter Employee Name: ";
+            getline(cin, name);
+            cout << "Enter Base Salary: ";
+            cin >> salary;
+
+            // 9. TRY-CATCH EXCEPTION BLOCK
+            try {
+                // Instantiating object will trigger validation check
+                FullTimeEmployee emp(id, name, salary);
+                
+                // Showcasing functional overloading inside code logic
+                cout << "Projected Flat Bonus (₹5000): ₹" << emp.calculateBonus(5000.0) << endl;
+                cout << "Projected Performance Bonus (10%): ₹" << emp.calculateBonus(10) << endl;
+                
+                // Commit to storage file
+                saveEmployeeToFile(emp, filename);
+            } 
+            catch (const InvalidSalaryException& e) {
+                // Catches the specific domain error gracefully
+                cerr << "\n[ALERT] " << e.what() << " Record discarded.\n" << endl;
+            }
+            catch (const exception& e) {
+                // Catch-all for any other unanticipated standard exceptions
+                cerr << "An unexpected error occurred: " << e.what() << endl;
+            }
+        } 
+        else if (choice == 2) {
+            readEmployeesFromFile(filename);
+        } 
+        else {
+            cout << "Invalid choice. Please select 1, 2, or 3." << endl;
+        }
     }
 
     return 0;
