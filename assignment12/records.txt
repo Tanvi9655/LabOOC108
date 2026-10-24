@@ -1,0 +1,6 @@
+
+Employee | ID: 101 | Name: Tanvi | Dept: CSE | Salary: Rs. 50000
+Employee (Updated) | ID: 102 | Name: Atharv | Dept: CSE | Salary: Rs. 55000
+Manager (Init) | ID: 201 | Name: Sneha | Dept: IT | Salary: Rs. 90000 | Bonus: Rs. 15000
+Employee | ID: 202 | Name: Zubiya | Dept: MBA | Salary: Rs. 85000
+Manager Bonus Update | ID: 202 | Bonus: Rs. 5000 | Total Pay: Rs. 90000
